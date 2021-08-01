@@ -904,7 +904,12 @@ cflags-$(CONFIG_MGEODEGX1)	+= -march=pentium-mmx
 cflags-$(CONFIG_MGEODE_LX)	+= $(call cc-option,-march=geode,-march=pentium-mmx)
 # add at the end to overwrite eventual tuning options from earlier
 # cpu entries
-cflags-$(CONFIG_X86_GENERIC) 	+= $(call tune,generic,$(call tune,i686))
+ifeq ($(CONFIG_MTUNE_FOR),"generic")
+	cflags-$(CONFIG_X86_GENERIC) 	+= $(call tune,generic,$(call tune,i686))
+else
+	cflags-$(CONFIG_MARCH) += -march=$(CONFIG_MTUNE_FOR)
+	cflags-y += -mtune=$(CONFIG_MTUNE_FOR)
+endif
 
 # Bug fix for binutils: this option is required in order to keep
 # binutils from generating NOPL instructions against our will.
@@ -957,7 +962,8 @@ cflags64-$(CONFIG_MEMERALDRAPIDS)	+= -march=emeraldrapids
 cflags64-$(CONFIG_GENERIC_CPU2) 	+= -march=x86-64-v2
 cflags64-$(CONFIG_GENERIC_CPU3) 	+= -march=x86-64-v3
 cflags64-$(CONFIG_GENERIC_CPU4) 	+= -march=x86-64-v4
-cflags64-$(CONFIG_GENERIC_CPU)	+= -mtune=generic
+cflags-$(CONFIG_MARCH)		+= -march=$(CONFIG_MTUNE_FOR)
+cflags-y			+= -mtune=$(CONFIG_MTUNE_FOR)
 KBUILD_CFLAGS += $(cflags64-y)
 
 rustflags64-$(CONFIG_MK8)		+= -Ctarget-cpu=k8
