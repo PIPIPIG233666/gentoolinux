@@ -6537,17 +6537,43 @@ static int wake_wide(struct task_struct *p)
 }
 
 /*
- * If a task switches in and then voluntarily relinquishes the
- * CPU quickly, it is regarded as a short duration task.
+ * Wake up the task on current CPU, if the following conditions are met:
  *
- * SIS_SHORT tries to wake up the short wakee on current CPU. This
- * aims to avoid race condition among CPUs due to frequent context
- * switch.
+ * 1. waker A is the only running task on this_cpu
+ * 2. A is a short duration task (waker will fall asleep soon)
+ * 3. wakee B is a short duration task (impact of B on A is minor)
+ * 4. A and B wake up each other alternately
  */
-static inline int is_short_task(struct task_struct *p)
+static bool
+wake_on_current(int this_cpu, struct task_struct *p)
 {
-	return sched_feat(SIS_SHORT) && p->se.dur_avg &&
-	       ((p->se.dur_avg * 8) < sysctl_sched_min_granularity);
+	if (!sched_feat(SIS_CURRENT))
+		return false;
+
+	if (cpu_rq(this_cpu)->nr_running > 1)
+		return false;
+
+	/*
+	 * If a task switches in and then voluntarily relinquishes the
+	 * CPU quickly, it is regarded as a short duration task. In that
+	 * way, the short waker is likely to relinquish the CPU soon, which
+	 * provides room for the wakee. Meanwhile, a short wakee would bring
+	 * minor impact to the current rq. Put the short waker and wakee together
+	 * bring benefit to cache-share task pairs and avoid migration overhead.
+	 */
+	if (!current->se.dur_avg || current->se.dur_avg >= sysctl_sched_migration_cost)
+		return false;
+
+	if (!p->se.dur_avg || p->se.dur_avg >= sysctl_sched_migration_cost)
+		return false;
+
+	if (current->wakee_flips || p->wakee_flips)
+		return false;
+
+	if (current->last_wakee != p || p->last_wakee != current)
+		return false;
+
+	return true;
 }
 
 /*
@@ -6585,11 +6611,6 @@ wake_affine_idle(int this_cpu, int prev_cpu, int sync)
 
 	if (available_idle_cpu(prev_cpu))
 		return prev_cpu;
-
-	/* The only running task is a short duration one. */
-	if (cpu_rq(this_cpu)->nr_running == 1 &&
-	    is_short_task(rcu_dereference(cpu_curr(this_cpu))))
-		return this_cpu;
 
 	return nr_cpumask_bits;
 }
@@ -6647,6 +6668,9 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 
 	if (sched_feat(WA_WEIGHT) && target == nr_cpumask_bits)
 		target = wake_affine_weight(sd, p, this_cpu, prev_cpu, sync);
+
+	if (target == nr_cpumask_bits && wake_on_current(this_cpu, p))
+		target = this_cpu;
 
 	schedstat_inc(p->stats.nr_wakeups_affine_attempts);
 	if (target == nr_cpumask_bits)
@@ -6965,13 +6989,6 @@ static int select_idle_cpu(struct task_struct *p, struct sched_domain *sd, bool 
 			/* overloaded LLC is unlikely to have idle cpu/core */
 			if (nr == 1)
 				return -1;
-
-			if (!has_idle_core && this == target &&
-			    (5 * nr < 3 * sd->span_weight) &&
-			    cpu_rq(target)->nr_running <= 1 &&
-			    is_short_task(p) &&
-			    is_short_task(rcu_dereference(cpu_curr(target))))
-				return target;
 		}
 	}
 
@@ -7175,6 +7192,9 @@ static int select_idle_sibling(struct task_struct *p, int prev, int target)
 				return i;
 		}
 	}
+
+	if (smp_processor_id() == target && wake_on_current(target, p))
+		return target;
 
 	i = select_idle_cpu(p, sd, has_idle_core, target);
 	if ((unsigned)i < nr_cpumask_bits)
