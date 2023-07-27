@@ -2322,7 +2322,8 @@ CONFIG_FW_LOADER=y
 CONFIG_FW_LOADER_DEBUG=y
 CONFIG_FW_LOADER_PAGED_BUF=y
 CONFIG_FW_LOADER_SYSFS=y
-CONFIG_EXTRA_FIRMWARE=""
+CONFIG_EXTRA_FIRMWARE="amdgpu/sienna_cichlid_ce.bin.zst amdgpu/sienna_cichlid_dmcub.bin.zst amdgpu/sienna_cichlid_me.bin.zst amdgpu/sienna_cichlid_mec.bin.zst amdgpu/sienna_cichlid_mec2.bin.zst amdgpu/sienna_cichlid_pfp.bin.zst amdgpu/sienna_cichlid_rlc.bin.zst amdgpu/sienna_cichlid_sdma.bin.zst amdgpu/sienna_cichlid_smc.bin.zst amdgpu/sienna_cichlid_sos.bin.zst amdgpu/sienna_cichlid_ta.bin.zst amdgpu/sienna_cichlid_vcn.bin.zst"
+CONFIG_EXTRA_FIRMWARE_DIR="/lib/firmware"
 CONFIG_FW_LOADER_USER_HELPER=y
 # CONFIG_FW_LOADER_USER_HELPER_FALLBACK is not set
 CONFIG_FW_LOADER_COMPRESS=y
