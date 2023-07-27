@@ -318,7 +318,6 @@ static s32 nct6775_access(struct i2c_adapter * adap, u16 addr,
 		else {
 			return -ENOTSUPP;
 		}
-
 	}
 
 	//wait for manual mode to complete

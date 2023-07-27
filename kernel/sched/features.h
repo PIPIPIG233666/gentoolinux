@@ -63,6 +63,7 @@ SCHED_FEAT(TTWU_QUEUE, true)
 SCHED_FEAT(SIS_PROP, false)
 SCHED_FEAT(SIS_UTIL, true)
 SCHED_FEAT(SIS_CURRENT, true)
+SCHED_FEAT(SIS_NODE, true)
 
 /*
  * Issue a WARN when we do multiple update_rq_clock() calls
